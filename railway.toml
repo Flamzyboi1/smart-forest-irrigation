@@ -3,6 +3,6 @@ builder = "RAILPACK"
 buildCommand = "mvn -B clean package -DskipTests"
 
 [deploy]
-startCommand = "java -Dserver.port=$PORT -jar target/smart-forest-irrigation.jar"
+startCommand = "sh -c 'exec java -Dserver.port=$PORT -jar target/*.jar'"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10

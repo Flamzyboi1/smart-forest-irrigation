@@ -1,1 +1,1 @@
-(function(){const translations={en:{}};window.setLanguage=function(){document.documentElement.lang='en';};window.toggleLanguage=function(){window.setLanguage();};window.setLanguage();})();
+(function(){const translations={};window.setLanguage=function(l){document.documentElement.lang='en';};window.toggleLanguage=function(){};window.setLanguage('en');})();

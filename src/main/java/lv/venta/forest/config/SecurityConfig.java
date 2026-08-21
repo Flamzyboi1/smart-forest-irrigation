@@ -19,13 +19,11 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-            .csrf(csrf -> csrf.disable())
+        http.csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/index.html", "/*.html", "/js/**", "/css/**", "/images/**", "/favicon.ico", "/api/auth/**").permitAll()
-                .anyRequest().authenticated()
-            )
+                .requestMatchers("/", "/index.html", "/dashboard.html", "/zones.html", "/sensors.html", "/readings.html", "/alerts.html", "/user-management.html", "/login.html", "/js/**", "/css/**", "/images/**", "/favicon.ico", "/api/auth/**").permitAll()
+                .anyRequest().authenticated())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

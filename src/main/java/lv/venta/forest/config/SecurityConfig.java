@@ -66,8 +66,8 @@ public class SecurityConfig {
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**", "/api/readings/**", "/api/zones/**", "/api/sensors/**", "/api/alerts/**").permitAll()
-                .requestMatchers("/h2-console/**", "/dashboard.html", "/index.html", "/login.html", "/readings.html", "/users.html", "/zones.html", "/sensors.html", "/alerts.html", "/change-requests.html", "/static/**", "/css/**", "/js/**").permitAll()
+                .requestMatchers("/api/auth/**", "/api/readings/**", "/api/zones/**", "/api/sensors/**", "/api/alerts/**", "/api/users/**", "/api/change-requests/**").permitAll()
+                .requestMatchers("/h2-console/**", "/dashboard.html", "/index.html", "/login.html", "/readings.html", "/user-management.html", "/zones.html", "/sensors.html", "/alerts.html", "/change-requests.html", "/static/**", "/css/**", "/js/**", "/").permitAll()
                 .anyRequest().authenticated()
             );
 

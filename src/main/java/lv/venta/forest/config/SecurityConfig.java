@@ -14,26 +14,12 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
-        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf().disable()
-            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            .and()
-            .authorizeHttpRequests()
-            .requestMatchers("/", "/**.html", "/js/**", "/css/**", "/images/**", "/favicon.ico", "/api/auth/**").permitAll()
-            .anyRequest().authenticated()
-            .and()
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-        return http.build();
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter){this.jwtAuthenticationFilter=jwtAuthenticationFilter;}
+    @Bean public PasswordEncoder passwordEncoder(){return new BCryptPasswordEncoder();}
+    @Bean public SecurityFilterChain securityFilterChain(HttpSecurity http)throws Exception{
+        http.csrf().disable().sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and().authorizeHttpRequests()
+        .requestMatchers("/","/*.html","/js/**","/css/**","/images/**","/favicon.ico","/api/auth/**").permitAll()
+        .requestMatchers("/api/users/**").hasRole("SUPERADMIN").anyRequest().authenticated().and()
+        .addFilterBefore(jwtAuthenticationFilter,UsernamePasswordAuthenticationFilter.class);return http.build();
     }
 }

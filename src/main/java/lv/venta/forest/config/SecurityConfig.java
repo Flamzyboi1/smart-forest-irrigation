@@ -4,28 +4,73 @@ import lv.venta.forest.repo.AppUserRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.authentication.ProviderManager;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
     private final AppUserRepository appUserRepository;
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, AppUserRepository appUserRepository){this.jwtAuthenticationFilter=jwtAuthenticationFilter;this.appUserRepository=appUserRepository;}
-    @Bean public PasswordEncoder passwordEncoder(){return new BCryptPasswordEncoder();}
-    @Bean public UserDetailsService userDetailsService(){return username->appUserRepository.findByUsername(username).map(u->User.withUsername(u.getUsername()).password(u.getPassword()).roles(u.getRole().name().replace("ROLE_","")).disabled(!u.isActive()).build()).orElseThrow(()->new UsernameNotFoundException("User not found"));}
-    @Bean public DaoAuthenticationProvider authenticationProvider(UserDetailsService uds, PasswordEncoder encoder){DaoAuthenticationProvider p=new DaoAuthenticationProvider();p.setUserDetailsService(uds);p.setPasswordEncoder(encoder);return p;}
-    @Bean public AuthenticationManager authenticationManager(DaoAuthenticationProvider provider){return new ProviderManager(provider);}
-    @Bean public SecurityFilterChain securityFilterChain(HttpSecurity http, DaoAuthenticationProvider provider)throws Exception{http.csrf().disable().sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and().authenticationProvider(provider).authorizeHttpRequests().requestMatchers("/","/*.html","/js/**","/css/**","/images/**","/favicon.ico","/api/auth/**").permitAll().requestMatchers("/api/users/**").hasRole("SUPERADMIN").anyRequest().authenticated().and().addFilterBefore(jwtAuthenticationFilter,UsernamePasswordAuthenticationFilter.class);return http.build();}
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    public SecurityConfig(AppUserRepository appUserRepository, JwtAuthenticationFilter jwtAuthenticationFilter) {
+        this.appUserRepository = appUserRepository;
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    }
+
+    @Bean
+    public UserDetailsService userDetailsService() {
+        return username -> {
+            return appUserRepository.findByUsername(username)
+                    .map(user -> org.springframework.security.core.userdetails.User
+                            .withUsername(user.getUsername())
+                            .password(user.getPassword())
+                            .roles(user.getRole())
+                            .build())
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+        };
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public AuthenticationProvider authenticationProvider(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+        return provider;
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationProvider authenticationProvider) {
+        return new org.springframework.security.authentication.ProviderManager(
+                java.util.Collections.singletonList(authenticationProvider));
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
+        http
+            .authenticationManager(authenticationManager)
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/auth/**", "/api/readings/**", "/api/zones/**", "/api/sensors/**", "/api/alerts/**").permitAll()
+                .requestMatchers("/h2-console/**", "/dashboard.html", "/index.html", "/login.html", "/readings.html", "/users.html", "/zones.html", "/sensors.html", "/alerts.html", "/change-requests.html", "/static/**", "/css/**", "/js/**").permitAll()
+                .anyRequest().authenticated()
+            );
+
+        return http.build();
+    }
 }

@@ -1,1 +1,375 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EcoIGM Users</title><style>:root{--g:#0d6b45;--bg:#f3f7f1;--line:#dce8dd}*{box-sizing:border-box}body{margin:0;font:14px Arial;color:#18352b;background:var(--bg)}header{background:#fff;border-bottom:1px solid var(--line);padding:16px 4%;display:flex;gap:28px;align-items:center;flex-wrap:wrap}.brand{font-size:21px;font-weight:800;color:var(--g)}nav{display:flex;gap:5px;flex-wrap:wrap}nav a{color:#496457;text-decoration:none;font-weight:700;padding:9px 12px;border-radius:6px}nav a.active,nav a:hover{background:#e8f4e8;color:var(--g)}main{max-width:1250px;margin:auto;padding:30px 4%}.heading{display:flex;justify-content:space-between;align-items:center}.eyebrow{color:var(--g);font-size:11px;font-weight:800;letter-spacing:2px}h1{font-size:30px;margin:8px 0}h2{margin-top:0}.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px;margin-top:20px;box-shadow:0 3px 14px #0000000b}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px}.btn,button{background:var(--g);color:#fff;border:0;border-radius:6px;padding:10px 14px;font-weight:700;cursor:pointer}.btn.secondary{background:#e8f4e8;color:var(--g)}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{text-align:left;padding:12px;border-bottom:1px solid #e5eee6}th{background:#edf6ed;color:#456455}.pill{display:inline-block;border-radius:12px;padding:4px 9px;background:#e6f5e2;color:#39723c;font-size:11px;font-weight:700}.form{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:15px}.form label{font-size:12px;font-weight:700;color:#496457}.form input,.form select{width:100%;padding:10px;border:1px solid #cbdccc;border-radius:6px;margin-top:6px}.msg{margin-top:10px}.error{color:#a12626}.success{color:#247044}@media(max-width:800px){.form{grid-template-columns:repeat(2,1fr)}}@media(max-width:500px){.form{grid-template-columns:1fr}.heading{display:block}}</style></head><body><header><div class="brand">⌁ EcoIGM</div><nav><a href="/dashboard.html">Dashboard</a><a href="/zones.html">Zones</a><a href="/sensors.html">Sensors</a><a href="/readings.html">Readings</a><a href="/alerts.html">Alerts</a><a class="active" href="/user-management.html">Users</a></nav><span id="who">● Admin area</span></header><main><div class="heading"><div><div class="eyebrow">ECOIGM / ADMINISTRATION</div><h1>User management</h1><p>Review operators, create accounts, and manage access.</p></div><button id="toggle" type="button">+ Add operator</button></div><section class="card" id="formCard" hidden><h2>New operator</h2><form id="operatorForm" class="form"><label>Username<input name="username" required minlength="3"></label><label>Full name<input name="fullName" required></label><label>Email<input name="email" type="email" required></label><label>Password<input name="password" type="password" required minlength="8"></label><label>Role<select name="role" required><option value="OPERATOR">OPERATOR</option><option value="SUPERADMIN">SUPERADMIN</option></select></label><label>Status<select name="status" required><option>ACTIVE</option><option>PENDING</option></select></label><button>Save operator</button></form><div id="formMsg" class="msg"></div></section><section class="card"><div class="toolbar"><h2>Registered users</h2><span id="count" class="pill">Loading…</span></div><div id="userError" class="msg error"></div><table><thead><tr><th>Username</th><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Action</th></tr></thead><tbody id="users"></tbody></table></section><section class="card"><div class="toolbar"><h2>Pending approvals</h2><button id="refresh" class="btn secondary" type="button">Refresh</button></div><div id="approvalMsg" class="msg"></div><table><thead><tr><th>Request</th><th>Submitted by</th><th>Status</th><th>Action</th></tr></thead><tbody id="requests"><tr><td colspan="4">No pending requests loaded.</td></tr></tbody></table></section></main><script>const fallback=[{username:'admin',fullName:'Forest Administrator',email:'admin@ecoigm.local',role:'SUPERADMIN',status:'ACTIVE'},{username:'operator',fullName:'Forest Operator',email:'operator@ecoigm.local',role:'OPERATOR',status:'ACTIVE'}];const token=()=>localStorage.getItem('forestToken')||'';const headers=()=>({'Content-Type':'application/json','Authorization':'Bearer '+token()});const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));let users=[];async function getUsers(){try{const r=await fetch('/api/users',{headers:headers()});if(!r.ok)throw Error();const d=await r.json();users=Array.isArray(d)?d:(d._embedded?.appUsers||[]);if(!users.length)users=fallback}catch{users=fallback;document.getElementById('userError').textContent='Live user API unavailable; showing demo users.'}render()}function render(){document.getElementById('count').textContent=users.length+' users';document.getElementById('users').innerHTML=users.map(u=>`<tr><td>${esc(u.username)}</td><td>${esc(u.fullName||u.name)}</td><td>${esc(u.email)}</td><td>${esc(u.role)}</td><td><span class="pill">${esc(u.status||'ACTIVE')}</span></td><td>${u.role==='SUPERADMIN'?'Protected':`<button class="delete" data-id="${esc(u.id)}" type="button">Delete</button>`}</td></tr>`).join('');document.querySelectorAll('.delete').forEach(b=>b.onclick=()=>removeUser(b.dataset.id))}async function removeUser(id){if(!id){document.getElementById('userError').textContent='This demo record cannot be deleted.';return}if(!confirm('Delete this operator?'))return;try{const r=await fetch('/api/users/'+id,{method:'DELETE',headers:headers()});if(!r.ok)throw Error();await getUsers()}catch{document.getElementById('userError').textContent='Could not delete operator.'}}document.getElementById('toggle').onclick=()=>document.getElementById('formCard').hidden=!document.getElementById('formCard').hidden;document.getElementById('operatorForm').onsubmit=async e=>{e.preventDefault();if(!e.target.reportValidity())return;const data=Object.fromEntries(new FormData(e.target));try{const r=await fetch('/api/users',{method:'POST',headers:headers(),body:JSON.stringify(data)});if(!r.ok)throw Error();document.getElementById('formMsg').className='msg success';document.getElementById('formMsg').textContent='Operator created';e.target.reset();getUsers()}catch{document.getElementById('formMsg').className='msg error';document.getElementById('formMsg').textContent='Could not create operator. Check superadmin login and API route.'}};document.getElementById('refresh').onclick=getUsers;getUsers();</script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Users - EcoIGM</title>
+  <style>
+    :root {
+      --primary: #2e7d32;
+      --primary-dark: #1b5e20;
+      --bg: #f5f5f5;
+      --card: #ffffff;
+      --text: #212121;
+      --border: #e0e0e0;
+      --error: #d32f2f;
+      --success: #388e3c;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 1rem 0;
+      margin-bottom: 20px;
+    }
+    header .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    h1 { font-size: 1.5rem; }
+    .card {
+      background: var(--card);
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .card h2 { margin-bottom: 15px; font-size: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { background: #f9f9f9; font-weight: 600; }
+    .btn {
+      display: inline-block;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      text-decoration: none;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-danger { background: var(--error); color: white; }
+    .btn-danger:hover { background: #b71c1c; }
+    .btn-secondary { background: #757575; color: white; }
+    .btn-secondary:hover { background: #616161; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 0.95rem;
+    }
+    .form-actions { display: flex; gap: 10px; margin-top: 15px; }
+    .msg { padding: 10px; border-radius: 4px; margin-bottom: 15px; }
+    .msg.error { background: #ffebee; color: var(--error); border: 1px solid #ef9a9a; }
+    .msg.success { background: #e8f5e9; color: var(--success); border: 1px solid #a5d6a7; }
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .badge-active { background: #e8f5e9; color: #2e7d32; }
+    .badge-inactive { background: #ffebee; color: #c62828; }
+    .pending-row { background: #fff8e1; }
+    .pending-info { font-size: 0.85rem; color: #666; }
+    .user-info { display: flex; align-items: center; gap: 10px; }
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .logout-link { color: white; text-decoration: none; }
+    .logout-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>EcoIGM - User Management</h1>
+      <nav>
+        <a href="/" class="logout-link">Dashboard</a> | 
+        <a href="/login.html" class="logout-link" id="logoutLink">Logout</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="userMsg" class="msg" style="display:none;"></div>
+
+    <div class="card">
+      <h2>Create New User</h2>
+      <form id="operatorForm">
+        <div class="form-group">
+          <label for="username">Username *</label>
+          <input type="text" id="username" name="username" required minlength="3" maxlength="30" pattern="[A-Za-z0-9._-]+" />
+        </div>
+        <div class="form-group">
+          <label for="fullName">Full Name *</label>
+          <input type="text" id="fullName" name="fullName" required />
+        </div>
+        <div class="form-group">
+          <label for="email">Email *</label>
+          <input type="email" id="email" name="email" required />
+        </div>
+        <div class="form-group">
+          <label for="password">Password *</label>
+          <input type="password" id="password" name="password" required minlength="6" />
+        </div>
+        <div class="form-group">
+          <label for="role">Role *</label>
+          <select id="role" name="role" required>
+            <option value="ADMIN">ADMIN</option>
+            <option value="USER">USER</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Create User</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Users</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Pending Change Requests</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Requested Changes</th>
+            <th>Requested At</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="pendingTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const token = () =>
+      localStorage.getItem('forestToken') ||
+      localStorage.getItem('token') ||
+      localStorage.getItem('jwt') ||
+      '';
+
+    const authHeaders = (json = true) => ({
+      ...(json ? { 'Content-Type': 'application/json' } : {}),
+      ...(token() ? { Authorization: `Bearer ${token()}` } : {})
+    });
+
+    async function readResponse(response) {
+      const text = await response.text();
+      let body = text;
+      try {
+        body = text ? JSON.parse(text) : null;
+      } catch {}
+      if (!response.ok) {
+        const message = body?.error || body?.message || text || `HTTP ${response.status}`;
+        throw new Error(`${response.status}: ${message}`);
+      }
+      return body;
+    }
+
+    async function getUsers() {
+      try {
+        const response = await fetch('/api/users', { headers: authHeaders() });
+        const users = await readResponse(response);
+        const tbody = document.getElementById('usersTableBody');
+        tbody.innerHTML = '';
+        users.forEach(u => {
+          const tr = document.createElement('tr');
+          const initial = (u.fullName || u.username || '?').charAt(0).toUpperCase();
+          tr.innerHTML = `
+            <td>
+              <div class="user-info">
+                <div class="user-avatar">${initial}</div>
+                <div>
+                  <strong>${escapeHtml(u.username)}</strong><br/>
+                  <small>${escapeHtml(u.fullName || '')}</small>
+                </div>
+              </div>
+            </td>
+            <td>${escapeHtml(u.email || '')}</td>
+            <td>${escapeHtml(u.role || '')}</td>
+            <td><span class="badge ${u.active ? 'badge-active' : 'badge-inactive'}">${u.active ? 'Active' : 'Inactive'}</span></td>
+            <td>
+              ${u.username !== 'ForestAdmin' ? `<button class="btn btn-danger" onclick="deleteUser(${u.id})">Delete</button>` : '<span style="color:#999;font-size:0.85rem;">Protected</span>'}
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (error) {
+        showMsg('userMsg', 'Could not load users: ' + error.message, 'error');
+      }
+    }
+
+    async function getPending() {
+      try {
+        const response = await fetch('/api/users/pending', { headers: authHeaders() });
+        const pending = await readResponse(response);
+        const tbody = document.getElementById('pendingTableBody');
+        tbody.innerHTML = '';
+        if (pending.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999;">No pending requests</td></tr>';
+          return;
+        }
+        pending.forEach(r => {
+          const tr = document.createElement('tr');
+          tr.className = 'pending-row';
+          const u = r.user || {};
+          const changes = [];
+          if (r.requestedUsername && r.requestedUsername !== u.username) changes.push(`Username: ${escapeHtml(r.requestedUsername)}`);
+          if (r.requestedFullName && r.requestedFullName !== u.fullName) changes.push(`Name: ${escapeHtml(r.requestedFullName)}`);
+          if (r.requestedEmail && r.requestedEmail !== u.email) changes.push(`Email: ${escapeHtml(r.requestedEmail)}`);
+          if (r.requestedPassword) changes.push('Password: ***');
+          tr.innerHTML = `
+            <td>${escapeHtml(u.username || '')}</td>
+            <td class="pending-info">${changes.join('<br/>') || 'No changes'}</td>
+            <td>${new Date(r.requestedAt).toLocaleString()}</td>
+            <td>
+              <button class="btn btn-primary" onclick="approveRequest(${r.id})">Approve</button>
+              <button class="btn btn-secondary" onclick="rejectRequest(${r.id})">Reject</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (error) {
+        showMsg('userMsg', 'Could not load pending requests: ' + error.message, 'error');
+      }
+    }
+
+    async function deleteUser(id) {
+      if (!confirm('Are you sure you want to delete this user?')) return;
+      try {
+        const response = await fetch(`/api/users/${id}`, {
+          method: 'DELETE',
+          headers: authHeaders()
+        });
+        await readResponse(response);
+        showMsg('userMsg', 'User deleted successfully.', 'success');
+        await getUsers();
+      } catch (error) {
+        showMsg('userMsg', 'Could not delete user: ' + error.message, 'error');
+      }
+    }
+
+    async function approveRequest(id) {
+      try {
+        const response = await fetch(`/api/users/requests/${id}/approve`, {
+          method: 'PUT',
+          headers: authHeaders()
+        });
+        await readResponse(response);
+        showMsg('userMsg', 'Request approved.', 'success');
+        await getUsers();
+        await getPending();
+      } catch (error) {
+        showMsg('userMsg', 'Could not approve request: ' + error.message, 'error');
+      }
+    }
+
+    async function rejectRequest(id) {
+      try {
+        const response = await fetch(`/api/users/requests/${id}/reject`, {
+          method: 'PUT',
+          headers: authHeaders()
+        });
+        await readResponse(response);
+        showMsg('userMsg', 'Request rejected.', 'success');
+        await getPending();
+      } catch (error) {
+        showMsg('userMsg', 'Could not reject request: ' + error.message, 'error');
+      }
+    }
+
+    function showMsg(id, text, type) {
+      const el = document.getElementById(id);
+      el.textContent = text;
+      el.className = `msg ${type}`;
+      el.style.display = 'block';
+      setTimeout(() => { el.style.display = 'none'; }, 5000);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    document.getElementById('operatorForm').onsubmit = async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const raw = Object.fromEntries(new FormData(form));
+      const data = {
+        username: raw.username.trim(),
+        fullName: raw.fullName.trim(),
+        email: raw.email.trim(),
+        password: raw.password,
+        role: raw.role,
+        active: true
+      };
+      try {
+        const response = await fetch('/api/users', {
+          method: 'POST',
+          headers: authHeaders(true),
+          body: JSON.stringify(data)
+        });
+        await readResponse(response);
+        showMsg('userMsg', 'User created successfully.', 'success');
+        form.reset();
+        await getUsers();
+      } catch (error) {
+        showMsg('userMsg', 'Could not create user: ' + error.message, 'error');
+      }
+    };
+
+    (async () => {
+      await getUsers();
+      await getPending();
+    })();
+  </script>
+</body>
+</html>

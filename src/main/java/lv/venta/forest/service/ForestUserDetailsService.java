@@ -11,8 +11,9 @@ import java.util.List;
 public class ForestUserDetailsService implements UserDetailsService {
     private final AppUserRepository repo;
     public ForestUserDetailsService(AppUserRepository repo){this.repo=repo;}
-    @Override public UserDetails loadUserByUsername(String username)throws UsernameNotFoundException{
-        AppUser u=repo.findByUsername(username).orElseThrow(()->new UsernameNotFoundException("User not found"));
-        return User.withUsername(u.getUsername()).password(u.getPassword()).roles(u.getRole()).disabled(!u.isActive()).build();
+    @Override public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        AppUser u=repo.findByUsernameIgnoreCase(username).orElseThrow(()->new UsernameNotFoundException(username));
+        String role=u.getRole()==AppUser.Role.SUPERADMIN?"SUPERADMIN":u.getRole().name();
+        return User.withUsername(u.getUsername()).password(u.getPassword()).authorities(new SimpleGrantedAuthority("ROLE_"+role)).disabled(u.getStatus()!=AppUser.Status.ACTIVE).build();
     }
 }

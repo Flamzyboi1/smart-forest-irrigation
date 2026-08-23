@@ -1,81 +1,27 @@
 package lv.venta.forest.controller;
 
-import java.util.Map;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.web.bind.annotation.*;
-
 import lv.venta.forest.config.JwtUtil;
 import lv.venta.forest.model.AppUser;
 import lv.venta.forest.repo.AppUserRepository;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
-
     private final AuthenticationManager authenticationManager;
     private final AppUserRepository users;
-    private final JwtUtil jwtUtil;
-
-    public AuthController(
-            AuthenticationManager authenticationManager,
-            AppUserRepository users,
-            JwtUtil jwtUtil) {
-
-        this.authenticationManager = authenticationManager;
-        this.users = users;
-        this.jwtUtil = jwtUtil;
-    }
-
+    private final JwtUtil jwt;
+    public AuthController(AuthenticationManager authenticationManager, AppUserRepository users, JwtUtil jwt){this.authenticationManager=authenticationManager;this.users=users;this.jwt=jwt;}
     @PostMapping("/login")
-    public ResponseEntity<?> login(
-            @RequestBody Map<String, String> body) {
-
-        String username = body.getOrDefault("username", "").trim();
-        String password = body.getOrDefault("password", "");
-
-        if (username.isBlank() || password.isBlank()) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of(
-                            "error",
-                            "Username and password are required"
-                    ));
-        }
-
-        try {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            username,
-                            password
-                    )
-            );
-
-        } catch (AuthenticationException e) {
-
-            return ResponseEntity
-                    .status(401)
-                    .body(Map.of(
-                            "error",
-                            "Invalid username or password"
-                    ));
-        }
-
-        AppUser user = users.findByUsername(username)
-                .orElseThrow();
-
-        String token = jwtUtil.generateToken(username);
-
-        return ResponseEntity.ok(
-                Map.of(
-                        "token", token,
-                        "username", user.getUsername(),
-                        "fullName", user.getFullName(),
-                        "email", user.getEmail(),
-                        "role", user.getRole()
-                )
-        );
+    public ResponseEntity<?> login(@RequestBody LoginRequest request){
+        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.username(), request.password()));
+        AppUser u=users.findByUsernameIgnoreCase(request.username()).orElseThrow();
+        return ResponseEntity.ok(Map.of("token",jwt.generateToken(u.getUsername()),"username",u.getUsername(),"fullName",u.getFullName(),"role",u.getRole().name(),"status",u.getStatus().name()));
     }
+    public record LoginRequest(String username,String password){}
 }

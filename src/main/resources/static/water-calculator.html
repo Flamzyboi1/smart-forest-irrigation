@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Calculator - Smart Forest Management</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        header { background: #2c5530; color: white; padding: 20px; margin-bottom: 20px; }
+        h1 { margin-bottom: 10px; }
+        .nav-links a { color: white; margin-right: 15px; text-decoration: none; }
+        .card { background: white; border-radius: 8px; padding: 30px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .card h2 { color: #2c5530; margin-bottom: 20px; border-bottom: 2px solid #2c5530; padding-bottom: 10px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; }
+        .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px; }
+        .btn { background: #2c5530; color: white; padding: 12px 30px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; }
+        .btn:hover { background: #1e3d21; }
+        .result-box { background: #e8f5e9; border: 2px solid #2c5530; border-radius: 8px; padding: 20px; margin-top: 20px; display: none; }
+        .result-box h3 { color: #2c5530; margin-bottom: 15px; }
+        .result-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #c8e6c9; }
+        .result-item:last-child { border-bottom: none; }
+        .result-item .label { font-weight: bold; }
+        .result-item .value { color: #2c5530; font-size: 18px; }
+        .algorithm-info { background: #fff3e0; border-left: 4px solid #ff9800; padding: 15px; margin-top: 20px; }
+        .algorithm-info h4 { color: #e65100; margin-bottom: 10px; }
+        .formula { background: #2c5530; color: white; padding: 15px; border-radius: 5px; text-align: center; font-size: 18px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>💧 Water Calculator</h1>
+            <div class="nav-links">
+                <a href="dashboard.html">Dashboard</a>
+                <a href="tree-species.html">Tree Species</a>
+                <a href="forest-management.html">Management</a>
+                <a href="water-balance.html">Water Balance</a>
+                <a href="water-calculator.html">Water Calculator</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <h2>Calculate Water Needs</h2>
+            <p style="margin-bottom: 20px; color: #666;">Predict total water required for irrigation based on field area and duration.</p>
+            
+            <div class="form-group">
+                <label for="area">Field Area (square meters):</label>
+                <input type="number" id="area" placeholder="e.g., 1000" min="1" step="any">
+            </div>
+            
+            <div class="form-group">
+                <label for="duration">Irrigation Duration (minutes):</label>
+                <input type="number" id="duration" placeholder="e.g., 10" min="1" step="any">
+            </div>
+            
+            <button class="btn" onclick="calculateWater()">Calculate Water Needs</button>
+            
+            <div class="result-box" id="resultBox">
+                <h3>📊 Calculation Results</h3>
+                <div class="result-item">
+                    <span class="label">Field Area:</span>
+                    <span class="value" id="resArea">-</span>
+                </div>
+                <div class="result-item">
+                    <span class="label">Duration:</span>
+                    <span class="value" id="resDuration">-</span>
+                </div>
+                <div class="result-item">
+                    <span class="label">Water Needed:</span>
+                    <span class="value" id="resWater">-</span>
+                </div>
+                <div class="result-item">
+                    <span class="label">Estimated Cost:</span>
+                    <span class="value" id="resCost">-</span>
+                </div>
+            </div>
+            
+            <div class="algorithm-info">
+                <h4>💡 Algorithm</h4>
+                <div class="formula">
+                    Water (L) = Area (m2) × Duration (min) × 1 L/m2/min
+                </div>
+                <p><strong>Main focus:</strong> Saving water and cost by precise calculation.</p>
+                <p style="margin-top: 10px; font-size: 14px; color: #666;">Cost estimate based on €0.002 per liter (adjust in backend for your local rates).</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function calculateWater() {
+            const area = document.getElementById('area').value;
+            const duration = document.getElementById('duration').value;
+            
+            if (!area || !duration || area <= 0 || duration <= 0) {
+                alert('Please enter valid positive numbers for both area and duration.');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/forest/water/calculate?area=${area}&duration=${duration}`);
+                const result = await response.json();
+                
+                document.getElementById('resArea').textContent = result.area + ' m2';
+                document.getElementById('resDuration').textContent = result.durationMinutes + ' minutes';
+                document.getElementById('resWater').textContent = result.waterNeededLiters.toLocaleString() + ' L (' + (result.waterNeededLiters / 1000).toFixed(2) + ' m3)';
+                document.getElementById('resCost').textContent = '€' + result.estimatedCostEUR.toFixed(2);
+                
+                document.getElementById('resultBox').style.display = 'block';
+            } catch (error) {
+                console.error('Error calculating water:', error);
+                alert('Error calculating water needs. Make sure the backend is running.');
+            }
+        }
+        
+        // Allow Enter key to trigger calculation
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                calculateWater();
+            }
+        });
+    </script>
+</body>
+</html>

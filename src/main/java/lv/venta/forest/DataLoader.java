@@ -1,14 +1,21 @@
 package lv.venta.forest;
 
-import lv.venta.forest.model.*;
-import lv.venta.forest.repo.*;
+import lv.venta.forest.model.AppUser;
+import lv.venta.forest.model.ForestAlert;
+import lv.venta.forest.model.ForestSensor;
+import lv.venta.forest.model.ForestZone;
+import lv.venta.forest.model.SensorReading;
+import lv.venta.forest.repo.AppUserRepository;
+import lv.venta.forest.repo.ForestAlertRepository;
+import lv.venta.forest.repo.ForestSensorRepository;
+import lv.venta.forest.repo.ForestZoneRepository;
+import lv.venta.forest.repo.SensorReadingRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
 public class DataLoader implements CommandLineRunner {
-
     private final AppUserRepository userRepo;
     private final ForestZoneRepository zoneRepo;
     private final ForestSensorRepository sensorRepo;
@@ -16,12 +23,9 @@ public class DataLoader implements CommandLineRunner {
     private final ForestAlertRepository alertRepo;
     private final PasswordEncoder encoder;
 
-    public DataLoader(AppUserRepository userRepo,
-                      ForestZoneRepository zoneRepo,
-                      ForestSensorRepository sensorRepo,
-                      SensorReadingRepository readingRepo,
-                      ForestAlertRepository alertRepo,
-                      PasswordEncoder encoder) {
+    public DataLoader(AppUserRepository userRepo, ForestZoneRepository zoneRepo,
+                      ForestSensorRepository sensorRepo, SensorReadingRepository readingRepo,
+                      ForestAlertRepository alertRepo, PasswordEncoder encoder) {
         this.userRepo = userRepo;
         this.zoneRepo = zoneRepo;
         this.sensorRepo = sensorRepo;
@@ -37,37 +41,17 @@ public class DataLoader implements CommandLineRunner {
             admin.setFullName("System Administrator");
             admin.setEmail("admin@forest.local");
             userRepo.save(admin);
-
-            AppUser manager = new AppUser("manager", encoder.encode("manager123"), "MANAGER");
-            manager.setFullName("Forest Manager");
-            manager.setEmail("manager@forest.local");
-            userRepo.save(manager);
-
-            AppUser user = new AppUser("user", encoder.encode("user123"), "USER");
-            user.setFullName("Forest Worker");
-            user.setEmail("user@forest.local");
-            userRepo.save(user);
         }
-
         if (zoneRepo.count() == 0) {
-            ForestZone zone1 = new ForestZone("North Forest", "Ventspils, Latvia", 12.5, "Pine forest");
-            ForestZone zone2 = new ForestZone("River Side", "Venta River area", 8.0, "Mixed forest");
-            zoneRepo.save(zone1);
-            zoneRepo.save(zone2);
-
-            ForestSensor sensor1 = new ForestSensor("SENSOR-001", "Soil Moisture", "soil_moisture", zone1);
-            ForestSensor sensor2 = new ForestSensor("SENSOR-002", "Temperature", "temperature", zone1);
-            ForestSensor sensor3 = new ForestSensor("SENSOR-003", "Humidity", "humidity", zone2);
-            sensorRepo.save(sensor1);
-            sensorRepo.save(sensor2);
-            sensorRepo.save(sensor3);
-
-            readingRepo.save(new SensorReading(sensor1, 32.5, "%"));
-            readingRepo.save(new SensorReading(sensor2, 18.7, "°C"));
-            readingRepo.save(new SensorReading(sensor3, 71.0, "%"));
-
-            alertRepo.save(new ForestAlert("LOW_MOISTURE", "Soil moisture is below the configured threshold", "HIGH", zone1));
-            alertRepo.save(new ForestAlert("SENSOR_CHECK", "Check sensor battery status", "MEDIUM", zone2));
+            ForestZone zone = new ForestZone("North Forest", "Ventspils, Latvia", 12.5, "Pine forest");
+            zoneRepo.save(zone);
+            ForestSensor moisture = new ForestSensor("SENSOR-001", "Soil Moisture", "soil_moisture", zone);
+            ForestSensor temperature = new ForestSensor("SENSOR-002", "Temperature", "temperature", zone);
+            sensorRepo.save(moisture);
+            sensorRepo.save(temperature);
+            readingRepo.save(new SensorReading(moisture, 32.5, "%"));
+            readingRepo.save(new SensorReading(temperature, 18.7, "C"));
+            alertRepo.save(new ForestAlert("LOW_MOISTURE", "Soil moisture is below the configured threshold", "HIGH", zone));
         }
     }
 }

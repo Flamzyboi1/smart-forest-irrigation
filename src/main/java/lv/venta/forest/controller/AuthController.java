@@ -8,6 +8,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController
@@ -16,12 +17,26 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final AppUserRepository users;
     private final JwtUtil jwt;
-    public AuthController(AuthenticationManager authenticationManager, AppUserRepository users, JwtUtil jwt){this.authenticationManager=authenticationManager;this.users=users;this.jwt=jwt;}
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request){
-        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.username(), request.password()));
-        AppUser u=users.findByUsernameIgnoreCase(request.username()).orElseThrow();
-        return ResponseEntity.ok(Map.of("token",jwt.generateToken(u.getUsername()),"username",u.getUsername(),"fullName",u.getFullName(),"role",u.getRole().name(),"status",u.getStatus().name()));
+
+    public AuthController(AuthenticationManager authenticationManager, AppUserRepository users, JwtUtil jwt) {
+        this.authenticationManager = authenticationManager;
+        this.users = users;
+        this.jwt = jwt;
     }
-    public record LoginRequest(String username,String password){}
+
+    @PostMapping("/login")
+    public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest request) {
+        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.username(), request.password()));
+        AppUser user = users.findByUsernameIgnoreCase(request.username()).orElseThrow();
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("token", jwt.generateToken(user.getUsername()));
+        response.put("username", user.getUsername());
+        response.put("fullName", user.getFullName());
+        response.put("role", user.getRole().name());
+        response.put("status", user.getStatus().name());
+        return ResponseEntity.ok(response);
+    }
+
+    public record LoginRequest(String username, String password) {}
 }

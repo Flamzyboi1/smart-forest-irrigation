@@ -1,15 +1,7 @@
 package lv.venta.forest;
 
-import lv.venta.forest.model.AppUser;
-import lv.venta.forest.model.ForestAlert;
-import lv.venta.forest.model.ForestSensor;
-import lv.venta.forest.model.ForestZone;
-import lv.venta.forest.model.SensorReading;
-import lv.venta.forest.repo.AppUserRepository;
-import lv.venta.forest.repo.ForestAlertRepository;
-import lv.venta.forest.repo.ForestSensorRepository;
-import lv.venta.forest.repo.ForestZoneRepository;
-import lv.venta.forest.repo.SensorReadingRepository;
+import lv.venta.forest.model.*;
+import lv.venta.forest.repo.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -42,13 +34,16 @@ public class DataLoader implements CommandLineRunner {
             admin.setEmail("admin@forest.local");
             userRepo.save(admin);
         }
+
         if (zoneRepo.count() == 0) {
             ForestZone zone = new ForestZone("North Forest", "Ventspils, Latvia", 12.5, "Pine forest");
             zoneRepo.save(zone);
+
             ForestSensor moisture = new ForestSensor("SENSOR-001", "Soil Moisture", "soil_moisture", zone);
             ForestSensor temperature = new ForestSensor("SENSOR-002", "Temperature", "temperature", zone);
             sensorRepo.save(moisture);
             sensorRepo.save(temperature);
+
             readingRepo.save(new SensorReading(moisture, 32.5, "%"));
             readingRepo.save(new SensorReading(temperature, 18.7, "C"));
             alertRepo.save(new ForestAlert("LOW_MOISTURE", "Soil moisture is below the configured threshold", "HIGH", zone));
